@@ -114,6 +114,49 @@ void run_qr_test() {
     }
 }
 
+template <class value_type, amgcl::detail::storage_order order>
+void run_qr_transposition_test() {
+    const size_t n = 5;
+    const size_t m = 3;
+
+    typedef typename boost::conditional<order == amgcl::detail::row_major,
+            boost::c_storage_order,
+            boost::fortran_storage_order
+            >::type ma_storage_order;
+
+    boost::multi_array<value_type, 2> A0(boost::extents[n][m], ma_storage_order());
+    boost::multi_array<value_type, 2> A0T(boost::extents[m][n], ma_storage_order());
+
+    for(size_t i = 0; i < n; ++i)
+        for(size_t j = 0; j < m; ++j) {
+            A0[i][j] = random<value_type>();
+            A0T[j][i] = A0[i][j];
+        }
+
+    boost::multi_array<value_type, 2> A = A0;
+
+    amgcl::detail::QR<value_type, order> qr;
+
+    qr.compute(n, m, A.data());
+    qr.compute_q();
+
+    // Check that A = QR
+    for(size_t i = 0; i < n; ++i) {
+        for(size_t j = 0; j < m; ++j) {
+            value_type sum = amgcl::math::zero<value_type>();
+
+            for(size_t k = 0; k < m; ++k)
+//                sum += qr.Q(i,k) * qr.R(k,j);
+            	sum += qr.R(k,i) * qr.Q(j,k);
+
+            sum -= A0T[i][j];
+
+            BOOST_CHECK_SMALL(amgcl::math::norm(sum), 1e-8);
+        }
+    }
+}
+
+
 BOOST_AUTO_TEST_SUITE( test_qr )
 
 BOOST_AUTO_TEST_CASE( test_qr ) {
@@ -123,6 +166,8 @@ BOOST_AUTO_TEST_CASE( test_qr ) {
     run_qr_test< std::complex<double>,               amgcl::detail::col_major>();
     run_qr_test< amgcl::static_matrix<double, 2, 2>, amgcl::detail::row_major>();
     run_qr_test< amgcl::static_matrix<double, 2, 2>, amgcl::detail::col_major>();
+
+    run_qr_transposition_test< double,               amgcl::detail::row_major>();
 }
 
 BOOST_AUTO_TEST_CASE( qr_issue_39 ) {
