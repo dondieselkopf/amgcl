@@ -174,6 +174,8 @@ class QR {
             const int row_stride = (Order == row_major ? nmax : 1);
             const int col_stride = (Order == row_major ? 1 : m);
 
+            std::cout << row_stride << " " << col_stride << std::endl;
+
             for(int i = 0, ii = 0; i < k; ++i, ii += row_stride + col_stride) {
                 // Generate elementary reflector H(i) to annihilate A[i+1:m)[i]
                 tau[i] = gen_reflector(m-i, A[ii], A + ii + row_stride, row_stride);
